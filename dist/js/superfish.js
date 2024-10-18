@@ -1,12 +1,16 @@
 /*
- * jQuery Superfish Menu Plugin - v1.7.10
- * Copyright (c) 2018 Joel Birch
+ * jQuery Superfish Menu Plugin - v1.7.8
+ * Copyright (c) 2016 Joel Birch
  *
  * Dual licensed under the MIT and GPL licenses:
  *	http://www.opensource.org/licenses/mit-license.php
  *	http://www.gnu.org/licenses/gpl.html
  */
 
+/*
+
+Changes 18.10.24: Bugfix: Menu not working on iPhone
+*/
 ;(function ($, w) {
 	"use strict";
 
@@ -98,22 +102,28 @@
 				}
 			},
 			touchHandler = function (e) {
-				var $this = $(this),
-					o = getOptions($this),
-					$ul = $this.siblings(e.data.popUpSelector);
-
-				if (o.onHandleTouch.call($ul) === false) {
-					return this;
-				}
-
-				if ($ul.length > 0 && $ul.is(':hidden')) {
-					$this.one('click.superfish', false);
-					if (e.type === 'MSPointerDown' || e.type === 'pointerdown') {
-						$this.trigger('focus');
-					} else {
-						$.proxy(over, $this.parent('li'))();
-					}
-				}
+			    var $this = $(this),
+			        o = getOptions($this),
+			        $ul = $this.siblings(e.data.popUpSelector);
+			
+			    // Variable, um festzustellen, ob das Untermenü bereits geöffnet wurde
+			    var isSubMenuOpen = $ul.length > 0 && !$ul.is(':hidden');
+			
+			    if (o.onHandleTouch.call($ul) === false) {
+			        return this;
+			    }
+			
+			    // Erster Klick: Öffne das Untermenü
+			    if ($ul.length > 0 && $ul.is(':hidden')) {
+			        e.preventDefault(); // Verhindert den Seitenaufruf
+			        $this.one('click.superfish', false); // Verhindert den zweiten Klick
+			        $.proxy(over, $this.parent('li'))(); // Öffne das Untermenü
+			    } 
+			    // Zweiter Klick: Öffne die Seite
+			    else if (isSubMenuOpen) {
+			        // Verhindere, dass der zweite Klick blockiert wird
+			        window.location.href = $this.attr('href'); // Lade die verlinkte Seite
+			    }
 			},
 			applyHandlers = function ($menu, o) {
 				var targets = 'li:has(' + o.popUpSelector + ')';
@@ -205,9 +215,7 @@
 					$this.off('.superfish').off('.hoverIntent');
 					// clear animation's inline display style
 					$hasPopUp.children(o.popUpSelector).attr('style', function (i, style) {
-						if (typeof style !== 'undefined') {
-							return style.replace(/display[^;]+;?/g, '');
-						}
+						return style.replace(/display[^;]+;?/g, '');
 					});
 					// reset 'current' path classes
 					o.$path.removeClass(o.hoverClass + ' ' + c.bcClass).addClass(o.pathClass);
